@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+				http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd
+				http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd
+				">
+
+
+	<context:component-scan base-package="cc.zenfery.hamster" />
+    
+	<!-- register default mvc: HttpMessageConverter formatter validating -->
+	<mvc:annotation-driven />
+    
+    <!--  --><mvc:default-servlet-handler/>
+	
+	<bean id="propertyConfigurer"
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:config.properties</value>
+            </list>
+        </property>
+    </bean>
+	
+	<!-- Interceptors -->
+	<bean id="sessionInterceptor" class="cc.zenfery.hamster.interceptor.SessionInterceptor" 
+		p:loginUrl="/login" />
+		
+	<mvc:interceptors>
+		
+		<!-- session interceptor -->
+		<mvc:interceptor>
+			<mvc:mapping path="/"/>
+			<mvc:exclude-mapping path="/login" />
+			<ref bean="sessionInterceptor"/>
+		</mvc:interceptor>
+		
+		<!-- change locale : set it to last -->
+		<mvc:interceptor>
+			<mvc:mapping path="/api/locale" />
+			<ref bean="localeChangeInterceptor" />
+		</mvc:interceptor>
+	</mvc:interceptors>
+	
+	<!-- local resolver -->
+	<bean id="localeResolver"
+		class="org.springframework.web.servlet.i18n.CookieLocaleResolver">
+		<property name="cookieName" value="lang" />
+	</bean>
+	<bean id="localeChangeInterceptor"
+		class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor">
+	</bean>
+	<!-- beanName解析器
+	<bean id="beanNameViewResolver"
+		class="org.springframework.web.servlet.view.BeanNameViewResolver" />
+ -->
+	<!-- resolver -->
+	<!-- velocity解析 -->
+	<bean id="velocityConfig"
+		class="org.springframework.web.servlet.view.velocity.VelocityConfigurer">
+		<property name="resourceLoaderPath" value="${project.views.dir}" />
+		<property name="configLocation" value="/WEB-INF/velocity/velocity.properties" />
+	</bean>
+	<bean id="velocityViewResolver"
+		class="org.springframework.web.servlet.view.velocity.VelocityViewResolver"
+		p:prefix="" p:suffix=".html" p:order="10" p:cache="false"
+		p:contentType="text/html;charset=UTF-8" p:exposeRequestAttributes="true"
+		p:allowRequestOverride="true" p:exposeSessionAttributes="true" 
+		p:exposeSpringMacroHelpers="true"/>
+
+	<!-- view -->
+	<!-- json -->
+	<bean id="jsonView" class="org.springframework.web.servlet.view.json.MappingJackson2JsonView" />
+	<bean id="jresponseView" class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+		<property name="modelKeys">
+			<set>
+				<value>code</value>
+				<value>result</value>
+				<value>msg</value>
+			</set>
+		</property>
+	</bean>
+
+	<!-- Content Negotiating -->
+	<bean id="contentNegotiationManager"
+		class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+		<property name="mediaTypes">
+			<props>
+				<prop key="xml">application/xml</prop>
+				<prop key="json">application/json</prop>
+			</props>
+		</property>
+	</bean>
+	<bean
+		class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+		<property name="useNotAcceptableStatusCode" value="true" />
+		<property name="contentNegotiationManager" ref="contentNegotiationManager" />
+		<property name="viewResolvers">
+			<list>
+				<!-- <bean class="org.springframework.web.servlet.view.BeanNameViewResolver" />-->
+				<ref bean="velocityViewResolver"/>
+			</list>
+		</property>
+		<property name="defaultViews">
+			<list>
+				<ref bean="jresponseView"/>
+			</list>
+		</property>
+	</bean>
+
+</beans>
